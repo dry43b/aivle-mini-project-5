@@ -5,10 +5,7 @@ phases:
     runtime-versions:
       nodejs: 20
     commands:
-      - echo "===== Node.js Version ====="
-      - node --version
-      - npm --version
-      - echo "===== Current Directory ====="
+      - echo "===== Environment Check ====="
       - pwd
       - ls -la
       - echo "===== Installing Dependencies ====="
@@ -18,25 +15,19 @@ phases:
     commands:
       - echo "===== Building Application ====="
       - npm run build
-      - echo "===== Build Output ====="
       - ls -la dist/
-      - echo "Total files - $(find dist -type f | wc -l)"
   
   post_build:
     commands:
-      - echo "===== Checking S3 Configuration ====="
-      - echo "S3_BUCKET_NAME = $S3_BUCKET_NAME"
+      - echo "===== S3 Deployment ====="
+      - echo "Bucket: $S3_BUCKET_NAME"
       - |
         if [ -z "$S3_BUCKET_NAME" ]; then
-          echo "ERROR: S3_BUCKET_NAME environment variable not set"
-          echo "Please set it in CodeBuild project environment variables"
+          echo "ERROR: S3_BUCKET_NAME not set"
           exit 1
         fi
-      - echo "===== Syncing to S3 ====="
-      - aws s3 sync dist s3://$S3_BUCKET_NAME --delete --cache-control "max-age=31536000,public" --exclude "*.html"
-      - aws s3 cp dist/index.html s3://$S3_BUCKET_NAME/index.html --cache-control "max-age=0,no-cache,no-store,must-revalidate"
-      - echo "===== Deployment Completed ====="
-      - aws s3 ls s3://$S3_BUCKET_NAME/ --recursive --human-readable --summarize | tail -3
+      - aws s3 sync dist s3://$S3_BUCKET_NAME --delete
+      - echo "Deployment completed"
 
 artifacts:
   files:
