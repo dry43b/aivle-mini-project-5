@@ -1,38 +1,31 @@
 version: 0.2
 
-env:
-  variables:
-    WORKING_DIR: Frontend
-
 phases:
-  pre_build:
-    commands:
-      - echo Changing to working directory...
-      - cd $WORKING_DIR
-      - pwd
-  
   install:
     runtime-versions:
       nodejs: 20
     commands:
-      - cd $WORKING_DIR
+      - echo Moving to Frontend directory...
+      - cd Frontend
       - echo Installing dependencies...
-      - npm ci
+      - npm install
   
   build:
     commands:
-      - cd $WORKING_DIR
       - echo Building application...
+      - cd Frontend
       - npm run build
-      - echo Build output...
+      - echo Checking build output...
       - ls -la dist/
   
   post_build:
     commands:
-      - cd $WORKING_DIR
-      - echo Syncing to S3 bucket - $S3_BUCKET_NAME
-      - aws s3 sync dist s3://$S3_BUCKET_NAME --delete
-      - echo Deployment completed
+      - echo Current directory before sync...
+      - pwd
+      - ls -la
+      - echo Syncing Frontend/dist to S3...
+      - aws s3 sync Frontend/dist s3://$S3_BUCKET_NAME --delete
+      - echo Sync completed successfully
 
 artifacts:
   files:
