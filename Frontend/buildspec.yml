@@ -31,25 +31,27 @@ phases:
   
   post_build:
     commands:
+      - echo "===== Creating zip archive ====="
+      - cd dist
+      - zip -r ../dist.zip .
+      - cd ..
+      - ls -lh dist.zip
+      
+      - echo "===== Uploading to S3 ====="
       - |
-        echo "===== S3 Deployment ====="
-        echo "Target bucket: $S3_BUCKET_NAME"
         if [ -z "$S3_BUCKET_NAME" ]; then
-          echo "ERROR: S3_BUCKET_NAME environment variable not set"
+          echo "ERROR: S3_BUCKET_NAME not set"
           exit 1
         fi
-        echo "Syncing files to S3..."
-        cd dist
-        aws s3 sync . s3://$S3_BUCKET_NAME --delete --cache-control "max-age=31536000,public" --exclude "*.html"
-        aws s3 cp index.html s3://$S3_BUCKET_NAME/index.html --cache-control "max-age=0,no-cache,no-store,must-revalidate"
-        echo "===== Deployment Completed ====="
-        aws s3 ls s3://$S3_BUCKET_NAME/ --recursive --human-readable --summarize | tail -3
+      - aws s3 cp dist.zip s3://$S3_BUCKET_NAME/dist.zip
+      - echo "===== Upload Completed ====="
+      - echo "File available at: https://$S3_BUCKET_NAME.s3.amazonaws.com/dist.zip"
 
 artifacts:
   files:
-    - '**/*'
-  base-directory: Frontend/dist
+    - dist.zip
+  name: frontend-build-$(date +%Y%m%d-%H%M%S)
 
 cache:
   paths:
-    - 'Frontend/node_modules/**/*'
+    - 'node_modules/**/*'
