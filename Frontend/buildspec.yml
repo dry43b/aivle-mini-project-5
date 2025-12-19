@@ -1,37 +1,49 @@
 version: 0.2
 
 phases:
+  pre_build:
+    commands:
+      - echo Build started on `date`
+      - echo Checking environment...
+      - node --version
+      - npm --version
+      - echo Current directory is $(pwd)
+      - ls -la
+  
   install:
     runtime-versions:
       nodejs: 20
     commands:
-      - echo Moving to Frontend directory...
-      - cd Frontend
       - echo Installing dependencies...
-      - npm install
+      - npm ci
   
   build:
     commands:
-      - echo Building application...
-      - cd Frontend
+      - echo Building Vite application...
       - npm run build
+      - echo Build completed
       - echo Checking build output...
       - ls -la dist/
+      - echo Total files - $(find dist -type f | wc -l)
   
   post_build:
     commands:
-      - echo Current directory before sync...
-      - pwd
-      - ls -la
-      - echo Syncing Frontend/dist to S3...
-      - aws s3 sync Frontend/dist s3://$S3_BUCKET_NAME --delete
-      - echo Sync completed successfully
+      - echo Validating S3 bucket...
+      - |
+        if [ -z "$S3_BUCKET_NAME" ]; then
+          echo "ERROR: S3_BUCKET_NAME environment variable not set"
+          exit 1
+        fi
+      - echo Syncing to S3 bucket $S3_BUCKET_NAME...
+      - aws s3 sync dist s3://$S3_BUCKET_NAME --delete --cache-control "max-age=31536000,public" --exclude "*.html"
+      - aws s3 cp dist/index.html s3://$S3_BUCKET_NAME/index.html --cache-control "max-age=0,no-cache,no-store,must-revalidate"
+      - echo Deployment completed on `date`
 
 artifacts:
   files:
     - '**/*'
-  base-directory: Frontend/dist
+  base-directory: dist
 
 cache:
   paths:
-    - 'Frontend/node_modules/**/*'
+    - 'node_modules/**/*'
