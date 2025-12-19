@@ -1,21 +1,44 @@
 version: 0.2
 
-cache:
-  paths:
-    - 'node_modules/**/*'
+env:
+  variables:
+    WORKING_DIR: Frontend
 
 phases:
-  install:
+  pre_build:
     commands:
-      - cd Frontend
-      - npm install
+      - echo Changing to working directory...
+      - cd $WORKING_DIR
+      - pwd
+  
+  install:
+    runtime-versions:
+      nodejs: 20
+    commands:
+      - cd $WORKING_DIR
+      - echo Installing dependencies...
+      - npm ci
+  
   build:
     commands:
-      - npm run build   # dist 폴더 생성
+      - cd $WORKING_DIR
+      - echo Building application...
+      - npm run build
+      - echo Build output...
+      - ls -la dist/
+  
   post_build:
     commands:
+      - cd $WORKING_DIR
+      - echo Syncing to S3 bucket - $S3_BUCKET_NAME
       - aws s3 sync dist s3://$S3_BUCKET_NAME --delete
-
+      - echo Deployment completed
 
 artifacts:
-  files: [ ]
+  files:
+    - '**/*'
+  base-directory: Frontend/dist
+
+cache:
+  paths:
+    - 'Frontend/node_modules/**/*'
