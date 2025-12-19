@@ -28,7 +28,6 @@ phases:
         echo "===== Build Output ====="
         ls -la dist/
         echo "Total files: $(find dist -type f | wc -l)"
-  
   post_build:
     commands:
       - echo "===== Creating zip archive ====="
@@ -45,12 +44,10 @@ phases:
       - aws s3 cp dist.zip s3://$S3_BUCKET_NAME/dist.zip
       - echo "===== Upload Completed ====="
       - echo "File available at: https://$S3_BUCKET_NAME.s3.amazonaws.com/dist.zip"
-
 artifacts:
   files:
     - dist.zip
   name: frontend-build-$(date +%Y%m%d-%H%M%S)
-
 cache:
   paths:
     - 'node_modules/**/*'
