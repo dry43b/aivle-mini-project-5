@@ -7,7 +7,7 @@ cache:
 phases:
   install:
     commands:
-      - cd frontend
+      - cd Frontend
       - npm install
   build:
     commands:
