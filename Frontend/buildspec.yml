@@ -32,7 +32,6 @@ phases:
   post_build:
     commands:
       - |
-        cd Frontend
         echo "===== S3 Deployment ====="
         echo "Target bucket: $S3_BUCKET_NAME"
         if [ -z "$S3_BUCKET_NAME" ]; then
