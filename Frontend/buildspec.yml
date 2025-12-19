@@ -36,7 +36,6 @@ phases:
       - zip -r ../dist.zip .
       - cd ..
       - ls -lh dist.zip
-      
       - echo "===== Uploading to S3 ====="
       - |
         if [ -z "$S3_BUCKET_NAME" ]; then
