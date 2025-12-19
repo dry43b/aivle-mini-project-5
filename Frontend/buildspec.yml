@@ -6,6 +6,13 @@ phases:
       nodejs: 20
     commands:
       - |
+        echo "===== Environment Info ====="
+        node --version
+        npm --version
+        pwd
+        ls -la
+        
+        echo "===== Installing Dependencies ====="
         cd Frontend
         npm install --legacy-peer-deps
   
@@ -13,7 +20,13 @@ phases:
     commands:
       - |
         cd Frontend
+        
+        echo "===== Building Application ====="
         npm run build
+        
+        echo "===== Build Summary ====="
+        du -sh dist
+        find dist -type f | wc -l
         ls -la dist/
   
   post_build:
@@ -21,30 +34,53 @@ phases:
       - |
         cd Frontend
         
+        # 환경 변수 확인
         if [ -z "$S3_BUCKET_NAME" ]; then
-          echo "ERROR: S3_BUCKET_NAME not set"
+          echo "ERROR: S3_BUCKET_NAME environment variable not set"
+          echo "Please configure it in CodeBuild project settings"
           exit 1
         fi
         
         # 버전 정보
         BUILD_TIME=$(date +%Y%m%d-%H%M%S)
         COMMIT_HASH=${CODEBUILD_RESOLVED_SOURCE_VERSION:0:7}
+        echo "Build Time: $BUILD_TIME"
+        echo "Commit: $COMMIT_HASH"
         
+        # 아카이브 생성
         echo "===== Creating Archive ====="
         cd dist
         zip -r ../dist-${BUILD_TIME}.zip .
         cd ..
         
+        # 파일 정보
+        echo "Archive size:"
+        ls -lh dist-${BUILD_TIME}.zip
+        
+        # S3 업로드
         echo "===== Uploading to S3 ====="
+        echo "Target bucket: $S3_BUCKET_NAME"
+        
         # 버전별 아카이브
-        aws s3 cp dist-${BUILD_TIME}.zip s3://$S3_BUCKET_NAME/releases/dist-${BUILD_TIME}.zip
+        aws s3 cp dist-${BUILD_TIME}.zip \
+          s3://$S3_BUCKET_NAME/releases/dist-${BUILD_TIME}.zip \
+          --metadata commit=$COMMIT_HASH
         
-        # 최신 버전 (항상 덮어쓰기)
-        aws s3 cp dist-${BUILD_TIME}.zip s3://$S3_BUCKET_NAME/dist-latest.zip
+        # 최신 버전
+        aws s3 cp dist-${BUILD_TIME}.zip \
+          s3://$S3_BUCKET_NAME/dist-latest.zip \
+          --metadata commit=$COMMIT_HASH,build-time=$BUILD_TIME
         
-        echo "===== URLs ====="
+        # 완료 메시지
+        echo ""
+        echo "===== Deployment Completed ====="
         echo "Latest: https://$S3_BUCKET_NAME.s3.amazonaws.com/dist-latest.zip"
-        echo "Version: https://$S3_BUCKET_NAME.s3.amazonaws.com/releases/dist-${BUILD_TIME}.zip"
+        echo "Archive: https://$S3_BUCKET_NAME.s3.amazonaws.com/releases/dist-${BUILD_TIME}.zip"
+        echo ""
+        
+        # S3 확인
+        echo "Recent uploads:"
+        aws s3 ls s3://$S3_BUCKET_NAME/releases/ --human-readable | tail -5
 
 cache:
   paths:
