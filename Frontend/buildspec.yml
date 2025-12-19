@@ -6,50 +6,45 @@ phases:
       nodejs: 20
     commands:
       - |
-        echo "===== Environment Check ====="
-        pwd
-        ls -la
-        echo ""
-        echo "===== Moving to Frontend ====="
-        cd Frontend || { echo "Failed to cd into Frontend"; exit 1; }
-        pwd
-        ls -la
-        echo ""
-        echo "===== Installing Dependencies ====="
+        cd Frontend
         npm install --legacy-peer-deps
   
   build:
     commands:
       - |
         cd Frontend
-        echo "===== Building Application ====="
         npm run build
-        echo ""
-        echo "===== Build Output ====="
         ls -la dist/
-        echo "Total files: $(find dist -type f | wc -l)"
-        echo ""
-        echo "===== Creating zip archive ====="
-        cd dist
-        zip -r ../../dist.zip .
-        cd ../..
-        ls -lh dist.zip
   
   post_build:
     commands:
       - |
-        echo "===== Uploading to S3 ====="
+        cd Frontend
+        
         if [ -z "$S3_BUCKET_NAME" ]; then
           echo "ERROR: S3_BUCKET_NAME not set"
           exit 1
         fi
-        aws s3 cp dist.zip s3://$S3_BUCKET_NAME/dist.zip
-        echo "===== Upload Completed ====="
-        echo "File available at: https://$S3_BUCKET_NAME.s3.amazonaws.com/dist.zip"
-
-artifacts:
-  files:
-    - dist.zip
+        
+        # 버전 정보
+        BUILD_TIME=$(date +%Y%m%d-%H%M%S)
+        COMMIT_HASH=${CODEBUILD_RESOLVED_SOURCE_VERSION:0:7}
+        
+        echo "===== Creating Archive ====="
+        cd dist
+        zip -r ../dist-${BUILD_TIME}.zip .
+        cd ..
+        
+        echo "===== Uploading to S3 ====="
+        # 버전별 아카이브
+        aws s3 cp dist-${BUILD_TIME}.zip s3://$S3_BUCKET_NAME/releases/dist-${BUILD_TIME}.zip
+        
+        # 최신 버전 (항상 덮어쓰기)
+        aws s3 cp dist-${BUILD_TIME}.zip s3://$S3_BUCKET_NAME/dist-latest.zip
+        
+        echo "===== URLs ====="
+        echo "Latest: https://$S3_BUCKET_NAME.s3.amazonaws.com/dist-latest.zip"
+        echo "Version: https://$S3_BUCKET_NAME.s3.amazonaws.com/releases/dist-${BUILD_TIME}.zip"
 
 cache:
   paths:
