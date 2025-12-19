@@ -1,49 +1,48 @@
 version: 0.2
 
 phases:
-  pre_build:
-    commands:
-      - echo Build started on `date`
-      - echo Checking environment...
-      - node --version
-      - npm --version
-      - echo Current directory is $(pwd)
-      - ls -la
-  
   install:
     runtime-versions:
       nodejs: 20
     commands:
-      - echo Installing dependencies...
-      - npm install
+      - |
+        echo "===== Environment Check ====="
+        pwd
+        ls -la
+        echo "===== Moving to Frontend ====="
+        cd Frontend
+        pwd
+        ls -la
+        echo "===== Installing dependencies ====="
+        npm install --legacy-peer-deps
   
   build:
     commands:
-      - echo Building Vite application...
-      - npm run build
-      - echo Build completed
-      - echo Checking build output...
-      - ls -la dist/
-      - echo Total files - $(find dist -type f | wc -l)
+      - |
+        cd Frontend
+        echo "===== Building application ====="
+        npm run build
+        echo "===== Build output ====="
+        ls -la dist/
+        echo "Total files: $(find dist -type f | wc -l)"
   
   post_build:
     commands:
-      - echo Validating S3 bucket...
       - |
+        cd Frontend
+        echo "===== Syncing to S3 ====="
         if [ -z "$S3_BUCKET_NAME" ]; then
-          echo "ERROR: S3_BUCKET_NAME environment variable not set"
+          echo "ERROR: S3_BUCKET_NAME not set"
           exit 1
         fi
-      - echo Syncing to S3 bucket $S3_BUCKET_NAME...
-      - aws s3 sync dist s3://$S3_BUCKET_NAME --delete --cache-control "max-age=31536000,public" --exclude "*.html"
-      - aws s3 cp dist/index.html s3://$S3_BUCKET_NAME/index.html --cache-control "max-age=0,no-cache,no-store,must-revalidate"
-      - echo Deployment completed on `date`
+        aws s3 sync dist s3://$S3_BUCKET_NAME --delete
+        echo "===== Deployment completed ====="
 
 artifacts:
   files:
     - '**/*'
-  base-directory: dist
+  base-directory: Frontend/dist
 
 cache:
   paths:
-    - 'node_modules/**/*'
+    - 'Frontend/node_modules/**/*'
